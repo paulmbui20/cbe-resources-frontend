@@ -1,6 +1,37 @@
 <script lang="ts">
-	import ProductsGrid from '../../components/ecommerce/products-grid.svelte';
 	import { Section } from 'flowbite-svelte-blocks';
+	import ResourceGrid from '../../components/ecommerce/resource-grid.svelte';
+	import SearchFilter from '../../components/search-filter.svelte';
+	import { productsStore, type Product } from '$lib/stores/dummy-products';
+	import { onMount } from 'svelte';
+	import { page } from '$app/stores';
+
+	let allItems: Product[] = [];
+	let resourceItems: Product[] = [];
+
+	productsStore.subscribe((items) => {
+		allItems = items;
+		resourceItems = items;
+	});
+
+	// handle search/filter events
+	function onSearch(e: CustomEvent) {
+		const term: string = e.detail.term || '';
+		const filters: string[] = e.detail.filters || [];
+		resourceItems = allItems.filter((p) => {
+			const matchesTerm =
+				!term ||
+				p.title.toLowerCase().includes(term.toLowerCase()) ||
+				(p.subject || '').toLowerCase().includes(term.toLowerCase());
+			const matchesFilter = filters.length === 0 || filters.includes(p.type);
+			return matchesTerm && matchesFilter;
+		});
+	}
+
+	function onSelect(e: CustomEvent) {
+		// navigate or filter to selected product
+		resourceItems = allItems.filter((p) => p.id === e.detail.product.id);
+	}
 </script>
 
 <Section name="default" class="my-2 py-1">
@@ -13,5 +44,13 @@
 		</p>
 	</div>
 
-	<ProductsGrid />
+	<div class="mb-4">
+		<SearchFilter
+			placeholder="Search products, subjects or types..."
+			on:search={onSearch}
+			on:select={onSelect}
+		/>
+	</div>
+
+	<ResourceGrid title="All Products" products={resourceItems} />
 </Section>

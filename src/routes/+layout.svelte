@@ -4,7 +4,19 @@
 	import Navbar from '../components/navbar.svelte';
 	import Footer from '../components/footer.svelte';
 
+	import { afterNavigate, beforeNavigate } from '$app/navigation';
+	import { navProgress } from '$lib/stores/navProgress';
+
 	let { children } = $props();
+
+	// wire navigation events to the progress store
+	beforeNavigate(() => {
+		navProgress.start();
+	});
+
+	afterNavigate(() => {
+		navProgress.done();
+	});
 </script>
 
 <svelte:head>
@@ -17,6 +29,16 @@
 </svelte:head>
 
 <Navbar />
+
+<!-- Top loading progress bar (Chrome-like) -->
+{#if $navProgress > 0}
+	<div aria-hidden="true" class="fixed top-0 right-0 left-0 z-50 h-0.5 bg-transparent">
+		<div
+			class="transition-width h-0.5 bg-primary-600 duration-200"
+			style="width: {$navProgress}%"
+		></div>
+	</div>
+{/if}
 
 <main class="mx-2 md:mx-5">
 	{@render children?.()}

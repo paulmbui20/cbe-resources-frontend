@@ -6,33 +6,43 @@ Everything you need to build a Svelte project, powered by [`sv`](https://github.
 
 If you're seeing this, you've probably already done this step. Congrats!
 
-```sh
+````sh
 # create a new project in the current directory
-npx sv create
+```markdown
+# CBE Resources (SvelteKit)
 
-# create a new project in my-app
-npx sv create my-app
-```
+This is a SvelteKit frontend for CBE Resources — a small UI scaffold to browse and buy curriculum resources (notes, schemes of work, exams, revision papers, lesson plans, etc.).
 
-## Developing
+Features added in this branch:
+- Top navigation progress bar (Chrome-like) when navigating between routes.
+- Reusable Search + Filter component with autocomplete suggestions from dummy data.
+- Hero search wired to suggestions and routes to the products page.
+- Products listing with search and filters.
+- Resource cards with Add to Cart and Buy Now (quick checkout) buttons.
+- Quick checkout page that only collects phone and email (MPESA integration to be added server-side).
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+Local development
 
-```sh
+1. Install dependencies:
+
+```pwsh
+npm install
+````
+
+2. Run dev server:
+
+```pwsh
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
 ```
 
-## Building
+3. Run type checking (svelte-check):
 
-To create a production version of your app:
-
-```sh
-npm run build
+```pwsh
+npm run check
 ```
 
-You can preview the production build with `npm run preview`.
+Notes
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+- The quick checkout flow adds a single product to the cart and navigates to confirmation. The MPESA STK push integration should be implemented server-side; you'll call that API from the quick checkout or checkout flow when ready.
+- The `src/lib/stores/dummy-products.ts` contains the dummy products and types used for suggestions and listings.
+- If you see TypeScript/svelte-check errors related to third-party components (Flowbite), consider keeping interactive handlers on native elements (inputs/buttons) to avoid typing issues.

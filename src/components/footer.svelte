@@ -29,13 +29,13 @@
 		<div class="col-span-2">
 			<h2 class="mb-6 text-sm font-semibold text-gray-400 uppercase dark:text-white">Resources</h2>
 			<FooterLinkGroup>
-				<FooterLink class="mb-4" href="/">Notes</FooterLink>
-				<FooterLink class="mb-4" href="/">Schemes of Work</FooterLink>
-				<FooterLink class="mb-4" href="/">Exams</FooterLink>
-				<FooterLink class="mb-4" href="">Revision Papers</FooterLink>
-				<FooterLink class="mb-4" href="/">Curriculum Designs</FooterLink>
-				<FooterLink class="mb-4" href="/">Report Cards</FooterLink>
-				<FooterLink class="mb-4" href="/">Lesson Plans</FooterLink>
+				<FooterLink class="mb-4" href="/notes">Notes</FooterLink>
+				<FooterLink class="mb-4" href="/schemes-of-work">Schemes of Work</FooterLink>
+				<FooterLink class="mb-4" href="/exams">Exams</FooterLink>
+				<FooterLink class="mb-4" href="/revision-papers">Revision Papers</FooterLink>
+				<FooterLink class="mb-4" href="/curriculum-designs">Curriculum Designs</FooterLink>
+				<FooterLink class="mb-4" href="/report-cards">Report Cards</FooterLink>
+				<FooterLink class="mb-4" href="/lesson-plans">Lesson Plans</FooterLink>
 			</FooterLinkGroup>
 		</div>
 		<div>
@@ -45,17 +45,16 @@
 			<FooterLinkGroup>
 				<FooterLink class="mb-4" href="/contact">Contact Us</FooterLink>
 				<FooterLink class="mb-4" href="/faqs">FAQ</FooterLink>
-				<FooterLink class="mb-4" href="/">Sitemap</FooterLink>
+				<FooterLink class="mb-4" href="/sitemap">Sitemap</FooterLink>
 				<FooterLink class="mb-4" href="/about">About Us</FooterLink>
 			</FooterLinkGroup>
 		</div>
 		<div>
 			<h2 class="mb-6 text-sm font-semibold text-gray-400 uppercase dark:text-white">Legal</h2>
 			<FooterLinkGroup>
-				<FooterLink class="mb-4" href="/">Return and Refund Policy</FooterLink>
-
-				<FooterLink class="mb-4" href="/">Privacy Policy</FooterLink>
-				<FooterLink class="mb-4" href="/">Terms of Service</FooterLink>
+				<FooterLink class="mb-4" href="/legal/refund">Return and Refund Policy</FooterLink>
+				<FooterLink class="mb-4" href="/legal/privacy">Privacy Policy</FooterLink>
+				<FooterLink class="mb-4" href="/legal/terms">Terms of Service</FooterLink>
 			</FooterLinkGroup>
 		</div>
 	</div>
