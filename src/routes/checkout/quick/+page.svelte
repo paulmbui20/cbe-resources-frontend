@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { Heading, Label, Input, Button } from 'flowbite-svelte';
-	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { cart } from '$lib/stores/cart';
+	import { quickCheckout } from '$lib/stores/quickCheckout';
+	import { productsStore } from '$lib/stores/dummy-products';
 
 	let phone = '';
 	let email = '';
@@ -11,13 +12,15 @@
 	let productTitle = '';
 	let productPrice = 0;
 
-	// read query params for quick buy
-	$: params = $page.url.searchParams;
-
+	// read product from quickCheckout store (safer than query params)
+	let qc: any = {};
+	quickCheckout.subscribe((v) => (qc = v));
 	onMount(() => {
-		productId = params.get('id') || '';
-		productTitle = params.get('title') || '';
-		productPrice = parseFloat(params.get('price') || '0') || 0;
+		if (qc.product) {
+			productId = qc.product.id;
+			productTitle = qc.product.title;
+			productPrice = qc.product.price;
+		}
 	});
 
 	function submit() {
@@ -37,8 +40,9 @@
 			id: productId || crypto.randomUUID(),
 			title: productTitle || 'Quick Item',
 			price: productPrice || 0,
-			quantity: 1
+			type: 'product' as any
 		});
+		quickCheckout.clear();
 
 		// Here we'd call backend to initiate mpesa; for now just navigate to confirmation
 		goto('/checkout/confirmation');

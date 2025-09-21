@@ -14,6 +14,10 @@
 		resourceItems = items;
 	});
 
+	onMount(() => {
+		productsStore.getAll();
+	});
+
 	// handle search/filter events
 	function onSearch(e: CustomEvent) {
 		const term: string = e.detail.term || '';

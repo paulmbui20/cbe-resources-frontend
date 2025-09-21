@@ -7,6 +7,7 @@ export interface Product {
 	price: number;
 	image?: string;
 	type: 'note' | 'scheme' | 'exam' | 'revision' | 'curriculum' | 'report' | 'lesson';
+	slug: string;
 	category: string;
 	subject?: string;
 	level?: string;
@@ -22,6 +23,7 @@ export const dummyProducts: Record<Product['type'], Product[]> = {
 			description: 'Comprehensive mathematics notes covering algebra, geometry, and statistics',
 			price: 50,
 			type: 'note',
+			slug: 'form-1-mathematics-notes',
 			category: 'Mathematics',
 			subject: 'Mathematics',
 			level: 'Form 1',
@@ -33,6 +35,7 @@ export const dummyProducts: Record<Product['type'], Product[]> = {
 			description: 'Complete physics notes with detailed explanations and examples',
 			price: 50,
 			type: 'note',
+			slug: 'form-2-physics-notes',
 			category: 'Sciences',
 			subject: 'Physics',
 			level: 'Form 2',
@@ -46,6 +49,7 @@ export const dummyProducts: Record<Product['type'], Product[]> = {
 			description: 'Detailed scheme of work with weekly lesson breakdowns',
 			price: 50,
 			type: 'scheme',
+			slug: 'biology-teaching-scheme',
 			category: 'Sciences',
 			subject: 'Biology',
 			level: 'Form 3',
@@ -57,6 +61,7 @@ export const dummyProducts: Record<Product['type'], Product[]> = {
 			description: 'Comprehensive language teaching scheme with grammar focus',
 			price: 50,
 			type: 'scheme',
+			slug: 'english-language-scheme',
 			category: 'Languages',
 			subject: 'English',
 			level: 'Form 2',
@@ -70,6 +75,7 @@ export const dummyProducts: Record<Product['type'], Product[]> = {
 			description: 'Collection of English papers with marking schemes',
 			price: 60,
 			type: 'exam',
+			slug: 'english-past-papers-2024',
 			category: 'Languages',
 			subject: 'English',
 			level: 'Form 4'
@@ -80,6 +86,7 @@ export const dummyProducts: Record<Product['type'], Product[]> = {
 			description: 'Set of 5 mock papers with solutions',
 			price: 55,
 			type: 'exam',
+			slug: 'mathematics-mock-exams',
 			category: 'Mathematics',
 			subject: 'Mathematics',
 			level: 'Form 4'
@@ -92,6 +99,7 @@ export const dummyProducts: Record<Product['type'], Product[]> = {
 			description: 'Comprehensive revision materials with practice questions',
 			price: 50,
 			type: 'revision',
+			slug: 'chemistry-revision-guide',
 			category: 'Sciences',
 			subject: 'Chemistry',
 			level: 'Form 2'
@@ -102,6 +110,7 @@ export const dummyProducts: Record<Product['type'], Product[]> = {
 			description: 'Topic-wise questions with worked solutions',
 			price: 50,
 			type: 'revision',
+			slug: 'physics-practice-questions',
 			category: 'Sciences',
 			subject: 'Physics',
 			level: 'Form 4'
@@ -114,6 +123,7 @@ export const dummyProducts: Record<Product['type'], Product[]> = {
 			description: 'Complete CBC design with assessment rubrics',
 			price: 60,
 			type: 'curriculum',
+			slug: 'cbc-mathematics-design',
 			category: 'Mathematics',
 			subject: 'Mathematics',
 			level: 'Grade 7'
@@ -124,6 +134,7 @@ export const dummyProducts: Record<Product['type'], Product[]> = {
 			description: 'Integrated science curriculum with learning outcomes',
 			price: 70,
 			type: 'curriculum',
+			slug: 'science-curriculum-plan',
 			category: 'Sciences',
 			subject: 'Science',
 			level: 'Grade 8'
@@ -136,6 +147,7 @@ export const dummyProducts: Record<Product['type'], Product[]> = {
 			description: 'Customizable report card with grade calculations',
 			price: 40,
 			type: 'report',
+			slug: 'high-school-report-template',
 			category: 'Administrative',
 			subject: 'All Subjects',
 			level: 'All Forms'
@@ -146,6 +158,7 @@ export const dummyProducts: Record<Product['type'], Product[]> = {
 			description: 'CBC-aligned student assessment template',
 			price: 40,
 			type: 'report',
+			slug: 'cbc-assessment-report',
 			category: 'Administrative',
 			subject: 'All Subjects',
 			level: 'All Grades'
@@ -158,6 +171,7 @@ export const dummyProducts: Record<Product['type'], Product[]> = {
 			description: 'Week-by-week plans with objectives and resources',
 			price: 50,
 			type: 'lesson',
+			slug: 'mathematics-lesson-plans',
 			category: 'Mathematics',
 			subject: 'Mathematics',
 			level: 'Form 1',
@@ -169,6 +183,7 @@ export const dummyProducts: Record<Product['type'], Product[]> = {
 			description: 'Detailed plans for practical sessions',
 			price: 50,
 			type: 'lesson',
+			slug: 'science-practical-plans',
 			category: 'Sciences',
 			subject: 'Science',
 			level: 'Form 2',
@@ -188,6 +203,14 @@ function createProductsStore() {
 		getAll: () => {
 			const allProducts = Object.values(dummyProducts).flat();
 			set(allProducts);
+		},
+		getById: (id: string) => {
+			const all = Object.values(dummyProducts).flat();
+			return all.find((p) => p.id === id);
+		},
+		getBySlug: (slug: string) => {
+			const all = Object.values(dummyProducts).flat();
+			return all.find((p) => p.slug === slug);
 		},
 		search: (query: string, filters: Partial<Product> = {}) => {
 			const allProducts = Object.values(dummyProducts).flat();

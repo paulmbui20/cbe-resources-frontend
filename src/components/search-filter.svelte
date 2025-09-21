@@ -31,8 +31,9 @@
 		productsStore.subscribe((list) => {
 			items = list;
 		})();
-		if (!q) {
-			suggestions = items.slice(0, 6);
+		if (!q || q.length < 2) {
+			// only show suggestions after user typed at least 2 chars
+			suggestions = [];
 			return;
 		}
 		suggestions = items
