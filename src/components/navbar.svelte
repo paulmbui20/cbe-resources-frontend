@@ -62,7 +62,7 @@
 
 				{#if cartOpen}
 					<div
-						class="absolute right-0 z-50 mt-2 w-80 rounded-lg bg-white shadow-xl dark:bg-gray-800"
+						class="absolute right-10 z-50 mt-2 w-80 rounded-lg bg-white text-gray-900 shadow-xl dark:bg-gray-800 dark:text-white"
 					>
 						<div class="p-4">
 							<h3 class="mb-4 text-lg font-semibold">Shopping Cart</h3>
@@ -115,7 +115,7 @@
 				Categories
 				<ChevronDownOutline class="ms-2 inline h-6 w-6 text-primary-800 dark:text-white" />
 			</NavLi>
-			<Dropdown>
+			<Dropdown class="cursor-pointer text-gray-800 hover:text-primary-500 dark:text-white">
 				<DropdownItem href="/notes">Notes</DropdownItem>
 				<DropdownItem href="/schemes-of-work">Schemes of Work</DropdownItem>
 				<DropdownItem href="/exams">Exams</DropdownItem>

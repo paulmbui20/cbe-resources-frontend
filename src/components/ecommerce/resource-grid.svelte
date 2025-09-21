@@ -1,11 +1,21 @@
 <script lang="ts">
 	import { Heading } from 'flowbite-svelte';
 	import type { Product } from '$lib/stores/dummy-products';
-	import { cart } from '$lib/stores/cart';
 	import ResourceCard from './resource-card.svelte';
+	import Pagination from '../pagination.svelte';
 
 	export let title: string;
 	export let products: Product[] = [];
+	export let pageSize = 10;
+
+	let page = 1;
+
+	const start = () => (page - 1) * pageSize;
+	const end = () => start() + pageSize;
+
+	function onPageChange(e: CustomEvent) {
+		page = e.detail.page;
+	}
 </script>
 
 <div class="">
@@ -20,9 +30,13 @@
 				</p>
 			</div>
 		{:else}
-			{#each products as product}
+			{#each products.slice(start(), end()) as product}
 				<ResourceCard {product} />
 			{/each}
 		{/if}
 	</div>
+
+	{#if products.length > pageSize}
+		<Pagination {page} {pageSize} total={products.length} on:change={onPageChange} />
+	{/if}
 </div>
