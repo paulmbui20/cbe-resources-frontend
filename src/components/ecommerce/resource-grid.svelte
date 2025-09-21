@@ -6,7 +6,7 @@
 
 	export let title: string;
 	export let products: Product[] = [];
-	export let pageSize = 4;
+	export let pageSize = 16;
 
 	let page = 1;
 

@@ -20,11 +20,20 @@
 </script>
 
 <svelte:head>
-	<link rel="icon" href={favicon} />
-	<title>CBE Resources</title>
+	<title>CBC Resources Hub - Quality Educational Materials for Teachers in Kenya</title>
 	<meta
 		name="description"
-		content="Your comprehensive hub for CBC curriculum resources in Kenya, get the latest lesson plans, detailed notes, schemes of work, revision papers, exams, curriculum designs, and report cards — all designed to enhance teaching and learning outcomes."
+		content="Access high-quality CBC-aligned educational resources, lesson plans, schemes of work, and teaching materials. Supporting Kenyan teachers in delivering effective competency-based curriculum."
+	/>
+	<meta property="og:title" content="CBC Resources Hub - Quality Educational Materials for Kenya" />
+	<meta
+		property="og:description"
+		content="Download CBC-aligned educational resources and teaching materials. Supporting teachers in competency-based curriculum delivery across Kenya."
+	/>
+	<meta property="og:type" content="website" />
+	<meta
+		name="keywords"
+		content="CBC, Kenya, teaching resources, lesson plans, competency-based curriculum, educational materials"
 	/>
 </svelte:head>
 
