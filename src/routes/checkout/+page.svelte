@@ -42,14 +42,17 @@
 				</div>
 
 				<div class="mt-6 border-t pt-4">
-					<div class="flex justify-between text-lg font-bold">
+					<div class="flex justify-between text-lg font-bold text-gray-600 dark:text-gray-300">
 						<span>Total</span>
 						<span>Ksh. {total.toFixed(2)}</span>
 					</div>
 				</div>
 
 				<div class="flex justify-between">
-					<Button color="light" on:click={() => goto('/products')}>Back</Button>
+					<button
+						class="rounded-lg bg-gray-400 px-3 py-2 dark:bg-gray-700"
+						on:click={() => goto('/products')}>Back</button
+					>
 					<Button type="submit" color="primary">Complete Order</Button>
 				</div>
 			</form>

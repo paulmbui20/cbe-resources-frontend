@@ -83,10 +83,10 @@
 					class="cursor-pointer px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
 					on:click={() => pickSuggestion(s)}
 				>
-					<div class="text-sm font-medium">{s.title}</div>
+					<div class="text-sm font-medium text-gray-600 dark:text-gray-400">{s.title}</div>
 					<div class="text-xs text-gray-500 dark:text-gray-400">
 						{s.type}
-						{#if s.subject}• {s.subject}{/if}
+						{#if s.subject}• {s.subject}{/if} • {s.level}
 					</div>
 				</div>
 			{/each}
@@ -97,7 +97,7 @@
 	<div class="mt-2 flex flex-wrap gap-2">
 		{#each Array.from(new Set($productsStore.map((p) => p.type))) as f}
 			<button
-				class="rounded border px-2 py-1 text-sm"
+				class="rounded border px-2 py-1 text-sm text-gray-600 dark:text-gray-400"
 				class:selected={selectedFilters.includes(f)}
 				on:click={() => toggleFilter(f)}>{f}</button
 			>

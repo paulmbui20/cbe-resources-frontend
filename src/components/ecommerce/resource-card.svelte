@@ -21,22 +21,23 @@
 
 <Card class="p-4">
 	<h5 class="mb-2 text-lg font-bold tracking-tight text-gray-900 dark:text-white">
-		<a href={`/products/${product.slug}`} class="hover:underline">{product.title}</a>
+		<a href={`/products/${product.slug}`} class="hover:text-primary-600 hover:underline"
+			>{product.title}</a
+		>
 	</h5>
 	<p class="mb-3 text-sm text-gray-700 dark:text-gray-400">
 		{product.description}
 	</p>
 	<div class="flex flex-col gap-2">
-		<div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-			<span class="capitalize">{product.type}</span>
-			{#if product.subject}
-				<span>•</span>
-				<span>{product.subject}</span>
-			{/if}
+		<div class="text-sm text-gray-600 dark:text-gray-400">
 			{#if product.level}
-				<span>•</span>
 				<span>{product.level}</span>
 			{/if}
+			{#if product.subject}
+				<span>{product.subject}</span>
+			{/if}
+			<br />
+			<span class="capitalize">{product.type}</span>
 		</div>
 		<p class="text-lg font-bold text-gray-900 dark:text-white">Ksh. {product.price}</p>
 
@@ -51,7 +52,7 @@
 				</button>
 				<button
 					type="button"
-					class="inline-flex items-center gap-2 rounded border px-3 py-1.5 text-sm font-medium text-gray-800"
+					class="inline-flex items-center gap-2 rounded bg-green-500 px-3 py-1.5 text-sm font-medium text-gray-800"
 					on:click={() => {
 						quickCheckout.setProduct(product);
 						goto('/checkout/quick');

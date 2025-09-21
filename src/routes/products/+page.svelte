@@ -33,8 +33,11 @@
 	}
 
 	function onSelect(e: CustomEvent) {
-		// navigate or filter to selected product
-		resourceItems = allItems.filter((p) => p.id === e.detail.product.id);
+		const selected = e.detail.product;
+		if (selected && selected.slug) {
+			// navigate to product details
+			window.location.href = `/products/${selected.slug}`;
+		}
 	}
 </script>
 

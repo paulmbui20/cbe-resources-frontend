@@ -1,20 +1,22 @@
 <script lang="ts">
 	import SearchFilter from './search-filter.svelte';
-	import { productsStore } from '$lib/stores/dummy-products';
 	import { goto } from '$app/navigation';
 
 	let selected: any = null;
 
 	function onSelect(e: CustomEvent) {
 		selected = e.detail.product;
-		// Navigate to product page if you have one, else console
-		console.log('Selected suggestion', selected);
+		if (selected && selected.slug) {
+			// navigate to product details only when a suggestion is clicked
+			goto(`/products/${selected.slug}`);
+		}
 	}
 
 	function onSearch(e: CustomEvent) {
-		// For now, route to products page with query param
-		const q = encodeURIComponent(e.detail.term || '');
-		goto(`/products?q=${q}`);
+		// Do not redirect immediately on typing. Parent pages can listen to search events.
+		// You can still navigate on explicit search if you want by uncommenting below:
+		// const q = encodeURIComponent(e.detail.term || '');
+		// goto(`/products?q=${q}`);
 	}
 </script>
 
