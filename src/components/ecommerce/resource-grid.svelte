@@ -6,16 +6,35 @@
 
 	export let title: string;
 	export let products: Product[] = [];
-	export let pageSize = 10;
+	export let pageSize = 4;
 
 	let page = 1;
 
 	const start = () => (page - 1) * pageSize;
 	const end = () => start() + pageSize;
 
-	function onPageChange(e: CustomEvent) {
-		page = e.detail.page;
-	}
+	let pagedItems: Product[] = [];
+
+	$: pageCount = Math.max(1, Math.ceil(products.length / pageSize));
+
+	// If the product list changes (filter/search), ensure page is valid —
+	// reset to 1 when current page would be out of range.
+	$: if (page > pageCount) page = 1;
+
+	$: pagedItems = products.slice((page - 1) * pageSize, page * pageSize);
+	// debug: show when page or pagedItems change
+	$: console.debug(
+		'[resource-grid] page=',
+		page,
+		'pageCount=',
+		pageCount,
+		'start=',
+		start(),
+		'end=',
+		end(),
+		'pagedItems=',
+		pagedItems.length
+	);
 </script>
 
 <div class="">
@@ -30,13 +49,13 @@
 				</p>
 			</div>
 		{:else}
-			{#each products.slice(start(), end()) as product}
+			{#each pagedItems as product}
 				<ResourceCard {product} />
 			{/each}
 		{/if}
 	</div>
 
 	{#if products.length > pageSize}
-		<Pagination {page} {pageSize} total={products.length} on:change={onPageChange} />
+		<Pagination bind:page {pageSize} total={products.length} />
 	{/if}
 </div>

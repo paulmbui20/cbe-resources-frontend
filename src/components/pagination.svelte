@@ -12,7 +12,9 @@
 	function goto(p: number) {
 		if (p < 1) p = 1;
 		if (p > pageCount) p = pageCount;
-		dispatch('change', { page: p });
+		page = p;
+		console.debug('[pagination] goto ->', p);
+		dispatch('pageChange', { page: p });
 	}
 </script>
 
@@ -25,7 +27,9 @@
 		{#each Array(pageCount) as _, i}
 			{#if Math.abs(i + 1 - page) <= 3 || i === 0 || i + 1 === pageCount}
 				<button
-					class="rounded border px-2 py-1 {page === i + 1 ? 'bg-primary-600 text-white' : ''}"
+					class="rounded border px-2 py-1"
+					class:bg-primary-600={page === i + 1}
+					class:text-white={page === i + 1}
 					on:click={() => goto(i + 1)}>{i + 1}</button
 				>
 			{:else if i + 1 === page - 4 || i + 1 === page + 4}

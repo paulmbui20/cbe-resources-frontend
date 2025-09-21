@@ -68,8 +68,14 @@
 			</div>
 
 			<div class="flex items-center justify-between">
-				<Button color="light" on:click={() => goto('/products')}>Cancel</Button>
-				<Button type="submit" color="primary">Pay Ksh. {productPrice}</Button>
+				<button
+					type="button"
+					class="rounded border bg-gray-100 px-4 py-2"
+					on:click={() => goto('/products')}>Cancel</button
+				>
+				<button type="submit" class="rounded bg-primary-600 px-4 py-2 text-white"
+					>Pay Ksh. {productPrice}</button
+				>
 			</div>
 		</form>
 	</div>
