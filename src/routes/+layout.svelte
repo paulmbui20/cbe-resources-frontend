@@ -49,7 +49,7 @@
 	</div>
 {/if}
 
-<main class="mx-2 md:mx-5">
+<main class="mx-1 md:mx-5">
 	{@render children?.()}
 </main>
 
