@@ -3,11 +3,12 @@
 	import Toast from './Toast.svelte';
 </script>
 
-<!-- Toast Container - positioned at top right, below navbar -->
+<!-- Toast Container - top right, below navbar -->
 <div
-	class="pointer-events-none fixed inset-0 z-50 flex items-start justify-end px-4 pt-20 sm:pt-24"
+	class="pointer-events-none fixed inset-0 z-50 flex flex-col items-end px-4 py-6 sm:p-6"
+	style="margin-top: 4rem;"
 >
-	<div class="flex w-full flex-col items-end space-y-4 sm:w-auto">
+	<div class="flex w-full max-w-sm flex-col items-end space-y-4">
 		{#each $toastStore as toast (toast.id)}
 			<Toast {toast} />
 		{/each}
