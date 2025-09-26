@@ -79,7 +79,7 @@
 	{#if suggestions.length}
 		<div class="absolute right-0 left-0 z-40 mt-1 rounded border bg-white shadow dark:bg-gray-800">
 			{#each suggestions as s}
-				<div
+				<button
 					class="cursor-pointer px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
 					on:click={() => pickSuggestion(s)}
 				>
@@ -88,7 +88,7 @@
 						{s.type}
 						{#if s.subject}• {s.subject}{/if} • {s.level}
 					</div>
-				</div>
+				</button>
 			{/each}
 		</div>
 	{/if}

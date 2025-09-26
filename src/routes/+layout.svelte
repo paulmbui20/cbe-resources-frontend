@@ -6,6 +6,7 @@
 
 	import { afterNavigate, beforeNavigate } from '$app/navigation';
 	import { navProgress } from '$lib/stores/navProgress';
+	import ToastContainer from '../components/ToastContainer.svelte';
 
 	let { children } = $props();
 
@@ -48,6 +49,9 @@
 		></div>
 	</div>
 {/if}
+
+<!-- Toast notifications -->
+<ToastContainer />
 
 <main class="mx-1 md:mx-5">
 	{@render children?.()}
