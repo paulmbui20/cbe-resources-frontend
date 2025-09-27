@@ -8,26 +8,29 @@
 		TableHead,
 		TableHeadCell
 	} from 'flowbite-svelte';
+	import { onMount } from 'svelte';
+	import { apiService } from '$lib/api';
+	import { toastStore } from '$lib/stores/toast';
 
-	// Dummy downloads data - replace with actual data store
-	const downloads = [
-		{
-			id: 1,
-			name: 'Grade 5 Science Notes',
-			downloadDate: '2025-09-20',
-			expiryDate: '2026-09-20',
-			size: '2.5 MB',
-			downloads: 2
-		},
-		{
-			id: 2,
-			name: 'CBC Lesson Plan Template',
-			downloadDate: '2025-09-20',
-			expiryDate: '2026-09-20',
-			size: '1.8 MB',
-			downloads: 1
+	let downloads: any[] = [];
+	let loading = false;
+
+	onMount(async () => {
+		loading = true;
+		try {
+			const res = await apiService.getDownloads();
+			if (res.status === 200 && res.data) {
+				downloads = res.data.downloads ?? res.data.items ?? res.data ?? [];
+			} else {
+				toastStore.error(res.message ?? 'Failed to load downloads');
+			}
+		} catch (err) {
+			console.error('Failed to fetch downloads', err);
+			toastStore.error('Network error while loading downloads');
+		} finally {
+			loading = false;
 		}
-	];
+	});
 </script>
 
 <div class="space-y-6">
@@ -46,18 +49,28 @@
 				<TableHeadCell>Action</TableHeadCell>
 			</TableHead>
 			<TableBody>
-				{#each downloads as item}
+				{#if loading}
 					<TableBodyRow>
-						<TableBodyCell>{item.name}</TableBodyCell>
-						<TableBodyCell>{item.downloadDate}</TableBodyCell>
-						<TableBodyCell>{item.expiryDate}</TableBodyCell>
-						<TableBodyCell>{item.size}</TableBodyCell>
-						<TableBodyCell>{item.downloads}</TableBodyCell>
-						<TableBodyCell>
-							<Button size="xs">Download</Button>
-						</TableBodyCell>
+						<TableBodyCell colspan={6}>Loading downloads...</TableBodyCell>
 					</TableBodyRow>
-				{/each}
+				{:else}
+					{#each downloads as d}
+						<TableBodyRow>
+							<TableBodyCell>{d.product_name}</TableBodyCell>
+							<TableBodyCell>{d.created_at ?? d.downloaded_at}</TableBodyCell>
+							<TableBodyCell>{d.download_expires_at}</TableBodyCell>
+							<TableBodyCell>{d.file_size ?? d.size}</TableBodyCell>
+							<TableBodyCell>{d.download_count ?? d.downloads}</TableBodyCell>
+							<TableBodyCell>
+								{#if d.download_url}
+									<a href={d.download_url} class="text-primary-600 hover:underline">Download</a>
+								{:else}
+									<Button size="xs">Expired</Button>
+								{/if}
+							</TableBodyCell>
+						</TableBodyRow>
+					{/each}
+				{/if}
 			</TableBody>
 		</Table>
 	</div>

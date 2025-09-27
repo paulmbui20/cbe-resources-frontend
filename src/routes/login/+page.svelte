@@ -14,6 +14,19 @@
 
 	let isSubmitting = false;
 
+	// Redirect away if already logged in
+	import { onMount } from 'svelte';
+
+	onMount(() => {
+		let current = null;
+		const unsub = auth.subscribe((s) => (current = s.isAuthenticated));
+		unsub();
+		if (current) {
+			toastStore.info('You are already logged in');
+			goto('/account');
+		}
+	});
+
 	async function onSubmit(e: Event) {
 		e.preventDefault();
 		if (isSubmitting) return;
@@ -22,6 +35,7 @@
 		isSubmitting = true;
 
 		try {
+			// login endpoint accepts email only
 			const res = await auth.login(identifier, password);
 			if (res.status === 200) {
 				toastStore.success('Login successful');
@@ -79,12 +93,12 @@
 								<div class="text-red-600">{error}</div>
 							{/if}
 							<Label class="space-y-2">
-								<span>Email or username</span>
+								<span>Email</span>
 								<Input
 									bind:value={identifier}
-									type="text"
+									type="email"
 									name="identifier"
-									placeholder="name@company.com or username"
+									placeholder="name@company.com"
 									required
 								/>
 							</Label>

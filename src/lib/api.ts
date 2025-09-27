@@ -15,6 +15,14 @@ export interface ContactFormData {
 
 class ApiService {
 	private baseUrl: string;
+	// single refresh promise to avoid concurrent refreshes
+	private refreshing: Promise<boolean> | null = null;
+	// Optional callback invoked when token refresh fails (so app can logout/redirect)
+	private onAuthFailure: (() => void) | null = null;
+
+	// Track refresh attempts to avoid hammering the backend
+	private refreshAttempts: number = 0;
+	private readonly maxRefreshAttempts: number = 3;
 
 	constructor() {
 		// In Svelte, environment variables are accessed through $env/static/public
@@ -65,13 +73,41 @@ class ApiService {
 		};
 
 		try {
-			const response = await fetch(url, config);
-			const data = await response.json();
+			let response = await fetch(url, config);
+			let data: any = {};
+			try {
+				data = await response.json();
+			} catch (e) {
+				// ignore json parse errors for empty responses
+			}
+
+			// If unauthorized, attempt token refresh once and retry
+			if (response.status === 401) {
+				// avoid infinite loops
+				const alreadyRetried = (options as any)._retried;
+				if (!alreadyRetried) {
+					const refreshResult = await this.attemptRefresh();
+					if (refreshResult) {
+						// set retried flag and re-run request with updated access token
+						const newAccess =
+							typeof window !== 'undefined' ? sessionStorage.getItem('access_token') : null;
+						if (newAccess) {
+							// update headers
+							(config.headers as Headers).set('Authorization', `Bearer ${newAccess}`);
+						}
+						(options as any)._retried = true;
+						response = await fetch(url, config);
+						try {
+							data = await response.json();
+						} catch (e) {}
+					}
+				}
+			}
 
 			return {
 				data: response.ok ? data : undefined,
-				message: data.message,
-				errors: data.errors,
+				message: data?.message,
+				errors: data?.errors,
 				status: response.status
 			};
 		} catch (error) {
@@ -81,6 +117,122 @@ class ApiService {
 				status: 0
 			};
 		}
+	}
+
+	// Attempt to refresh tokens using stored refresh token. Returns true if refresh succeeded.
+	private async attemptRefresh(): Promise<boolean> {
+		// If we've exceeded the allowed number of refresh attempts, refuse to try again
+		if (this.refreshAttempts >= this.maxRefreshAttempts) {
+			console.warn('Max refresh attempts exceeded; invoking auth failure handler');
+			// ensure tokens are cleared
+			if (typeof window !== 'undefined') {
+				sessionStorage.removeItem('access_token');
+				sessionStorage.removeItem('refresh_token');
+			}
+			try {
+				this.onAuthFailure && this.onAuthFailure();
+			} catch (e) {
+				console.debug('onAuthFailure handler errored', e);
+			}
+			return false;
+		}
+
+		// If a refresh is already in progress, await it
+		if (this.refreshing) return this.refreshing;
+
+		this.refreshing = (async () => {
+			try {
+				const storedRefresh =
+					typeof window !== 'undefined' ? sessionStorage.getItem('refresh_token') : null;
+
+				const url = `${this.baseUrl}/accounts/api/token/refresh/`;
+				const headers = new Headers({
+					'Content-Type': 'application/json',
+					Accept: 'application/json'
+				});
+
+				const body = storedRefresh
+					? JSON.stringify({ refresh: storedRefresh })
+					: JSON.stringify({});
+
+				const resp = await fetch(url, { method: 'POST', headers, body, credentials: 'include' });
+				if (!resp) return false;
+				let parsed: any = {};
+				try {
+					parsed = await resp.json();
+				} catch (e) {}
+
+				if (resp.status === 200 && parsed?.access) {
+					// persist access and refresh if present
+					if (typeof window !== 'undefined') {
+						sessionStorage.setItem('access_token', parsed.access);
+						if (parsed.refresh) sessionStorage.setItem('refresh_token', parsed.refresh);
+					}
+					// reset failed attempts counter on success
+					this.refreshAttempts = 0;
+					return true;
+				}
+				// refresh failed: clear tokens
+				if (typeof window !== 'undefined') {
+					sessionStorage.removeItem('access_token');
+					sessionStorage.removeItem('refresh_token');
+				}
+				// increment attempts counter and notify if we've hit the limit
+				this.refreshAttempts = Math.min(this.refreshAttempts + 1, this.maxRefreshAttempts);
+				if (this.refreshAttempts >= this.maxRefreshAttempts) {
+					console.warn('Reached maximum refresh attempts during refresh');
+					try {
+						this.onAuthFailure && this.onAuthFailure();
+					} catch (e) {
+						console.debug('onAuthFailure handler errored', e);
+					}
+				}
+				// notify application that refresh failed so it can perform logout/redirect
+				try {
+					this.onAuthFailure && this.onAuthFailure();
+				} catch (e) {
+					console.debug('onAuthFailure handler errored', e);
+				}
+				return false;
+			} catch (e) {
+				console.debug('Token refresh failed', e);
+				if (typeof window !== 'undefined') {
+					sessionStorage.removeItem('access_token');
+					sessionStorage.removeItem('refresh_token');
+				}
+				// increment attempts counter and notify if we've hit the limit
+				this.refreshAttempts = Math.min(this.refreshAttempts + 1, this.maxRefreshAttempts);
+				if (this.refreshAttempts >= this.maxRefreshAttempts) {
+					try {
+						this.onAuthFailure && this.onAuthFailure();
+					} catch (err) {
+						console.debug('onAuthFailure handler errored', err);
+					}
+				} else {
+					// invoke handler on intermittent failures too to allow UI to react if needed
+					try {
+						this.onAuthFailure && this.onAuthFailure();
+					} catch (err) {
+						console.debug('onAuthFailure handler errored', err);
+					}
+				}
+				return false;
+			} finally {
+				this.refreshing = null;
+			}
+		})();
+
+		return this.refreshing;
+	}
+
+	// Allow the app to register a callback which will be invoked when refresh fails.
+	setOnAuthFailure(fn: (() => void) | null) {
+		this.onAuthFailure = fn;
+	}
+
+	// Reset the refresh attempts counter (useful after a successful manual refresh)
+	resetRefreshAttempts() {
+		this.refreshAttempts = 0;
 	}
 
 	async submitContact(formData: ContactFormData): Promise<ApiResponse> {
@@ -108,30 +260,61 @@ class ApiService {
 	}
 
 	async login(identifier: string, password: string): Promise<ApiResponse> {
-		// Use TokenObtainPairView endpoint to obtain access/refresh pair
-		// TokenObtainPairView expects 'username' by default. If your backend accepts email, it may accept 'email'.
-		const payload: any = { password };
-		if (identifier.includes('@')) payload.email = identifier;
-		else payload.username = identifier;
-
+		// This app now uses email-only login
+		const payload: any = { email: identifier, password };
 		return this.post('/accounts/api/token/', payload);
 	}
 
 	async logout(refresh?: string): Promise<ApiResponse> {
-		// If a refresh token is provided, send it in the body; otherwise rely on cookie
-		const body = refresh ? { refresh } : {};
-		return this.post('/accounts/api/accounts/logout/', body);
+		// If a refresh token is provided, backend expects it under `refresh_token` field.
+		// If not available, call the 'logout-all' endpoint to blacklist outstanding tokens.
+		if (refresh) {
+			const body = { refresh_token: refresh };
+			return this.post('/accounts/api/logout/', body);
+		} else {
+			// No refresh token in JS storage — attempt server-side logout-all which blacklists all tokens
+			return this.post('/accounts/api/auth/logout-all/', {});
+		}
 	}
 
 	async refreshToken(refresh?: string): Promise<ApiResponse> {
-		// If refresh provided, send it in the body. Otherwise, call with empty body and
-		// rely on httpOnly cookie set by backend (if implemented).
-		const body = refresh ? { refresh } : {};
-		return this.post('/accounts/api/token/refresh/', body);
+		// Deprecated: use internal attemptRefresh to avoid recursion. Keep compatibility by
+		// calling the refresh endpoint directly here (bypass makeRequest) so callers can still use this method.
+		try {
+			const body = refresh ? { refresh } : {};
+			const url = `${this.baseUrl}/accounts/api/token/refresh/`;
+			const headers = new Headers({
+				'Content-Type': 'application/json',
+				Accept: 'application/json'
+			});
+			const resp = await fetch(url, {
+				method: 'POST',
+				headers,
+				body: JSON.stringify(body),
+				credentials: 'include'
+			});
+			const data = await resp.json();
+			return {
+				data: resp.ok ? data : undefined,
+				message: data?.message,
+				errors: data?.errors,
+				status: resp.status
+			};
+		} catch (e) {
+			return { message: 'Network error occurred. Please try again.', status: 0 };
+		}
 	}
 
 	async verifyToken(token: string): Promise<ApiResponse> {
 		return this.post('/accounts/api/token/verify/', { token });
+	}
+
+	async verifyEmail(uidb64: string, token: string): Promise<ApiResponse> {
+		// This endpoint in backend is GET; client can call it to validate and receive redirect_url
+		return this.makeRequest(
+			`/accounts/api/verify-email/${encodeURIComponent(uidb64)}/${encodeURIComponent(token)}/`,
+			{ method: 'GET' }
+		);
 	}
 
 	async getProfile(): Promise<ApiResponse> {
@@ -172,6 +355,35 @@ class ApiService {
 
 	async verificationStatus(): Promise<ApiResponse> {
 		return this.makeRequest('/accounts/api/verification-status/', { method: 'GET' });
+	}
+
+	// Purchases and downloads for account
+	async getPurchases(): Promise<ApiResponse> {
+		return this.makeRequest('/accounts/api/purchases/', { method: 'GET' });
+	}
+
+	async getDownloads(): Promise<ApiResponse> {
+		return this.makeRequest('/accounts/api/downloads/', { method: 'GET' });
+	}
+
+	async getDashboard(): Promise<ApiResponse> {
+		return this.makeRequest('/accounts/api/dashboard/', { method: 'GET' });
+	}
+
+	async getOrders(): Promise<ApiResponse> {
+		return this.makeRequest('/accounts/api/orders/', { method: 'GET' });
+	}
+
+	async getPayments(): Promise<ApiResponse> {
+		return this.makeRequest('/accounts/api/payments/', { method: 'GET' });
+	}
+
+	async getStats(): Promise<ApiResponse> {
+		return this.makeRequest('/accounts/api/stats/', { method: 'GET' });
+	}
+
+	async getDownloadHistory(): Promise<ApiResponse> {
+		return this.makeRequest('/accounts/api/download-history/', { method: 'GET' });
 	}
 }
 

@@ -9,6 +9,7 @@
 	import { Eye, EyeOff } from 'lucide-svelte';
 
 	let email = '';
+	let username = '';
 	let password = '';
 	let confirm = '';
 	let accepted = false;
@@ -17,6 +18,18 @@
 	let showConfirm = false;
 
 	let isSubmitting = false;
+
+	// Redirect away if already logged in
+	import { onMount } from 'svelte';
+	onMount(() => {
+		let current = null;
+		const unsub = auth.subscribe((s) => (current = s.isAuthenticated));
+		unsub();
+		if (current) {
+			toastStore.info('You are already logged in');
+			goto('/account');
+		}
+	});
 
 	async function onSubmit(e: Event) {
 		e.preventDefault();
@@ -35,11 +48,21 @@
 			return;
 		}
 
+		// check availability before submit
+		if (emailAvailable === false) {
+			toastStore.error('Email is already registered');
+			return;
+		}
+		if (usernameAvailable === false) {
+			toastStore.error('Username is already taken');
+			return;
+		}
+
 		isSubmitting = true;
 		try {
 			const res = await auth.register({
 				email,
-				username: email.split('@')[0],
+				username,
 				password,
 				password_confirm: confirm
 			});
@@ -65,6 +88,43 @@
 			isSubmitting = false;
 		}
 	}
+
+	// debounce helper
+	function debounce(fn: Function, wait = 400) {
+		let t: any;
+		return (...args: any[]) => {
+			clearTimeout(t);
+			t = setTimeout(() => fn(...args), wait);
+		};
+	}
+
+	import { apiService } from '$lib/api';
+	let emailAvailable: boolean | null = null;
+	let usernameAvailable: boolean | null = null;
+
+	const checkEmailDebounced = debounce(async (value: string) => {
+		if (!value) return (emailAvailable = null);
+		try {
+			const res = await apiService.checkEmail(value);
+			emailAvailable = res.status === 200 ? !!res.data?.available : null;
+		} catch (e) {
+			emailAvailable = null;
+		}
+	}, 500);
+
+	const checkUsernameDebounced = debounce(async (value: string) => {
+		if (!value) return (usernameAvailable = null);
+		try {
+			const res = await apiService.checkUsername(value);
+			usernameAvailable = res.status === 200 ? !!res.data?.available : null;
+		} catch (e) {
+			usernameAvailable = null;
+		}
+	}, 500);
+
+	// watch inputs
+	$: if (email) checkEmailDebounced(email);
+	$: if (username) checkUsernameDebounced(username);
 </script>
 
 <!-- Above the fold registration layout matching contact/login -->
@@ -99,16 +159,39 @@
 							{#if error}
 								<div class="text-red-600">{error}</div>
 							{/if}
-							<Label class="space-y-2">
-								<span>Your email</span>
-								<Input
-									bind:value={email}
-									type="email"
-									name="email"
-									placeholder="name@company.com"
-									required
-								/>
-							</Label>
+							<div class="grid gap-4 md:grid-cols-2">
+								<Label class="space-y-2">
+									<span>Username</span>
+									<Input
+										bind:value={username}
+										type="text"
+										name="username"
+										placeholder="username"
+										required
+									/>
+									{#if usernameAvailable === true}
+										<p class="text-sm text-green-600">Username is available</p>
+									{:else if usernameAvailable === false}
+										<p class="text-sm text-red-600">Username is taken</p>
+									{/if}
+								</Label>
+
+								<Label class="space-y-2">
+									<span>Your email</span>
+									<Input
+										bind:value={email}
+										type="email"
+										name="email"
+										placeholder="name@company.com"
+										required
+									/>
+									{#if emailAvailable === true}
+										<p class="text-sm text-green-600">Email is available</p>
+									{:else if emailAvailable === false}
+										<p class="text-sm text-red-600">Email is already registered</p>
+									{/if}
+								</Label>
+							</div>
 							<Label class="space-y-2">
 								<span>Your password</span>
 								<div class="relative">

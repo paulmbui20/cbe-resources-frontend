@@ -14,11 +14,16 @@
 	import { ChevronDownOutline, CartPlusSolid, TrashBinSolid } from 'flowbite-svelte-icons';
 	import favicon from '$lib/assets/favicon.svg';
 	import { cart, type CartItem } from '$lib/stores/cart';
+	import { auth } from '$lib/stores/auth';
+	import { toastStore } from '$lib/stores/toast';
 
 	let cartOpen = false;
 	let itemCount: number;
 	let cartItems: CartItem[];
 	let total: number;
+	let user: any = null;
+
+	const unsubAuth = auth.subscribe((s) => (user = s.user));
 
 	cart.subscribe((state) => {
 		itemCount = state.itemCount;
@@ -105,7 +110,11 @@
 				{/if}
 			</div>
 			<DarkMode class="border text-primary-500 dark:border-gray-800 dark:text-primary-600" />
-			<Button href="/login">Log in</Button>
+			{#if user}
+				<Button href="/account">Account</Button>
+			{:else}
+				<Button href="/login">Log in</Button>
+			{/if}
 			<NavHamburger class="hover:cursor-pointer" />
 		</div>
 		<NavUl>

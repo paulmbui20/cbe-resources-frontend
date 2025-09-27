@@ -1,5 +1,7 @@
 import { writable } from 'svelte/store';
 import { apiService } from '../api';
+import { toastStore } from './toast';
+import { goto } from '$app/navigation';
 
 export interface User {
 	id: number;
@@ -40,6 +42,27 @@ function createAuthStore() {
 	return {
 		subscribe,
 		set,
+		// Called by ApiService when refresh fails to ensure a secure logout flow
+		async handleAuthFailure(message?: string) {
+			const state: AuthState = {
+				user: null,
+				access: null,
+				isAuthenticated: false
+			};
+			persist(state);
+			set(state);
+			try {
+				toastStore.info(message ?? 'Your session has expired. Please sign in again.');
+			} catch (e) {
+				console.debug('Failed to show toast on auth failure', e);
+			}
+			// Redirect to login page
+			try {
+				goto('/login');
+			} catch (e) {
+				console.debug('Redirect to login failed', e);
+			}
+		},
 		async register(payload: any) {
 			try {
 				const res = await apiService.register(payload);
@@ -59,6 +82,14 @@ function createAuthStore() {
 					}
 					persist(state);
 					set(state);
+					// Attempt to load fresh profile from server if not present
+					if (!user) {
+						try {
+							await auth.loadProfile();
+						} catch (e) {
+							console.debug('Failed to load profile after register', e);
+						}
+					}
 				}
 				return res;
 			} catch (error) {
@@ -84,6 +115,14 @@ function createAuthStore() {
 					}
 					persist(state);
 					set(state);
+					// If backend didn't include user object, fetch profile
+					if (!user) {
+						try {
+							await auth.loadProfile();
+						} catch (e) {
+							console.debug('Failed to load profile after login', e);
+						}
+					}
 				}
 				return res;
 			} catch (error) {
@@ -92,22 +131,21 @@ function createAuthStore() {
 			}
 		},
 		async logout() {
+			const refresh =
+				typeof window !== 'undefined' ? sessionStorage.getItem('refresh_token') : null;
 			try {
-				// If we have a non-httpOnly refresh token, send it to logout endpoint so backend can blacklist it
-				const refresh =
-					typeof window !== 'undefined' ? sessionStorage.getItem('refresh_token') : null;
 				await apiService.logout(refresh ?? undefined);
-				const state: AuthState = {
-					user: null,
-					access: null,
-					isAuthenticated: false
-				};
-				persist(state);
-				set(state);
 			} catch (error) {
-				console.error('Logout error:', error);
-				throw error;
+				// Log but continue to clear local state to avoid leaving the client in an inconsistent auth state
+				console.error('Logout request error (server):', error);
 			}
+			const state: AuthState = {
+				user: null,
+				access: null,
+				isAuthenticated: false
+			};
+			persist(state);
+			set(state);
 		},
 		async refresh() {
 			try {
@@ -128,18 +166,28 @@ function createAuthStore() {
 						persist(next);
 						return next;
 					});
+					// Reset server refresh attempts counter in apiService
+					try {
+						(apiService as any).resetRefreshAttempts?.();
+					} catch (e) {
+						console.debug('Failed to reset apiService refresh attempts', e);
+					}
+					return res;
+				} else {
+					// refresh did not succeed — invoke common handler to clear state + redirect
+					if ((auth as any).handleAuthFailure) {
+						(auth as any).handleAuthFailure('Session expired. Please sign in again.');
+					}
+					return res;
 				}
-				return res;
 			} catch (error) {
 				console.error('Token refresh error:', error);
-				// On refresh failure, clear the auth state
-				const state: AuthState = {
-					user: null,
-					access: null,
-					isAuthenticated: false
-				};
-				persist(state);
-				set(state);
+				// On refresh error, ensure common handler is used to clear state and redirect
+				try {
+					(auth as any).handleAuthFailure?.('Session expired. Please sign in again.');
+				} catch (e) {
+					console.debug('handleAuthFailure failed', e);
+				}
 				throw error;
 			}
 		},
@@ -154,3 +202,19 @@ function createAuthStore() {
 }
 
 export const auth = createAuthStore();
+
+// Register apiService onAuthFailure callback to the auth store's handler
+if (typeof window !== 'undefined') {
+	apiService.setOnAuthFailure(() => {
+		// Use a small timeout to ensure stores are ready in hydration
+		setTimeout(() => {
+			// import the store and call the handler
+			try {
+				// auth is already exported
+				(auth as any).handleAuthFailure?.();
+			} catch (e) {
+				console.debug('Failed to invoke auth.handleAuthFailure', e);
+			}
+		}, 10);
+	});
+}

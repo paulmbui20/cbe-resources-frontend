@@ -54,6 +54,21 @@
 				>
 					<nav class="flex flex-col space-y-1">
 						<a
+							href="/account"
+							class="block rounded-md px-3 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 dark:text-gray-200 dark:hover:bg-gray-700"
+							>Overview</a
+						>
+						<a
+							href="/account/orders"
+							class="block rounded-md px-3 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 dark:text-gray-200 dark:hover:bg-gray-700"
+							>Orders</a
+						>
+						<a
+							href="/account/payments"
+							class="block rounded-md px-3 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 dark:text-gray-200 dark:hover:bg-gray-700"
+							>Payments</a
+						>
+						<a
 							href="/account/settings"
 							class="block rounded-md px-3 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 dark:text-gray-200 dark:hover:bg-gray-700"
 							>Settings</a
@@ -68,15 +83,16 @@
 							class="block rounded-md px-3 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 dark:text-gray-200 dark:hover:bg-gray-700"
 							>Downloads</a
 						>
-						<a
-							href="/account/analytics"
-							class="block rounded-md px-3 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 dark:text-gray-200 dark:hover:bg-gray-700"
-							>Analytics</a
-						>
 						<button
 							class="mt-4 w-full rounded-md border px-3 py-2 text-left text-red-600 hover:bg-red-50 dark:border-gray-600 dark:text-red-400"
-							on:click={() => goto('/login')}>Sign Out</button
+							on:click={async () => {
+								await auth.logout();
+								toastStore.success('Signed out');
+								goto('/');
+							}}
 						>
+							Sign Out
+						</button>
 					</nav>
 				</div>
 			</aside>
