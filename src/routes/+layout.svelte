@@ -7,6 +7,8 @@
 	import { afterNavigate, beforeNavigate } from '$app/navigation';
 	import { navProgress } from '$lib/stores/navProgress';
 	import ToastContainer from '../components/ToastContainer.svelte';
+	import { onMount } from 'svelte';
+	import { setCsrf } from '$lib/stores/csrf';
 
 	let { children } = $props();
 
@@ -17,6 +19,37 @@
 
 	afterNavigate(() => {
 		navProgress.done();
+	});
+
+	// Fetch CSRF token on app start and store it for later use
+	onMount(async () => {
+		try {
+			// call backend endpoint which sets CSRF cookie via @ensure_csrf_cookie
+			const resp = await fetch(`${import.meta.env.VITE_API_BASE_URL}/accounts/api/csrf/`, {
+				method: 'GET',
+				credentials: 'include'
+			});
+			if (resp.ok) {
+				// backend sets the cookie; also try to read the csrftoken cookie if available
+				let token: string | null = null;
+				try {
+					// Parse document.cookie if running in browser
+					if (typeof document !== 'undefined') {
+						const match = document.cookie.match(/(^|; )csrftoken=([^;]+)/);
+						if (match) token = decodeURIComponent(match[2]);
+					}
+				} catch (e) {
+					// ignore cookie parsing errors
+				}
+				// Persist token in sessionStorage and store
+				if (token) {
+					sessionStorage.setItem('csrf_token', token);
+					setCsrf(token);
+				}
+			}
+		} catch (e) {
+			console.debug('Failed to fetch CSRF token on mount', e);
+		}
 	});
 </script>
 

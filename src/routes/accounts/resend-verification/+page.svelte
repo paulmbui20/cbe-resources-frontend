@@ -21,7 +21,6 @@
 	}
 
 	onMount(() => {
-		// auto attempt send once mounted
 		send();
 	});
 </script>

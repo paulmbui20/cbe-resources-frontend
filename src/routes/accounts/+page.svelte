@@ -2,7 +2,6 @@
 	import { onMount } from 'svelte';
 	import { apiService } from '$lib/api';
 	import { toastStore } from '$lib/stores/toast';
-	import { auth } from '$lib/stores/auth';
 
 	let dashboard: any = null;
 	let loading = false;
@@ -22,16 +21,10 @@
 			loading = false;
 		}
 	});
-
-	async function doLogout() {
-		await auth.logout();
-		toastStore.success('You have been logged out');
-		location.href = '/';
-	}
 </script>
 
 <section class="mx-auto max-w-4xl py-6">
-	<h1 class="text-2xl font-bold">Account Dashboard</h1>
+	<h1 class="text-2xl font-bold dark:text-white">Account Dashboard</h1>
 	{#if loading}
 		<p>Loading...</p>
 	{:else if dashboard}

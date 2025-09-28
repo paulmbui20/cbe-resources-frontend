@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { auth } from '$lib/stores/auth';
+	import { apiService } from '$lib/api';
 	import { goto } from '$app/navigation';
 	import { toastStore } from '$lib/stores/toast';
 	import { Section, Register } from 'flowbite-svelte-blocks';
@@ -23,7 +24,7 @@
 		unsub();
 		if (current) {
 			toastStore.info('You are already logged in');
-			goto('/account');
+			goto('/accounts');
 		}
 	});
 
@@ -39,8 +40,34 @@
 			const res = await auth.login(identifier, password);
 			if (res.status === 200) {
 				toastStore.success('Login successful');
-				goto('/account');
+				// Ensure profile is loaded (useful when backend uses HttpOnly cookies)
+				let isAuth = false;
+				const unsub = auth.subscribe((s) => (isAuth = s.isAuthenticated));
+				unsub();
+				if (isAuth) {
+					goto('/accounts');
+				} else {
+					// Attempt a direct profile fetch to validate cookie was accepted by server
+					try {
+						const profileRes = await apiService.getProfile();
+						console.debug('Profile response after login:', profileRes);
+						if (profileRes.status === 200) {
+							// update auth store (auth.login should have done this, but ensure state)
+							try {
+								await auth.loadProfile();
+							} catch (e) {}
+							goto('/accounts');
+						} else {
+							toastStore.error('Login succeeded but server did not recognize session.');
+							console.debug('Server did not authenticate the cookie; profile fetch failed.');
+						}
+					} catch (e) {
+						console.debug('Error fetching profile after login', e);
+						toastStore.error('Error validating session after login. Check console/network.');
+					}
+				}
 			} else {
+				console.debug('Login response:', res);
 				if (res.errors) {
 					// Show validation errors from backend
 					const messages = Object.values(res.errors).flat().join(', ');
@@ -128,7 +155,9 @@
 							</Label>
 							<div class="flex items-start">
 								<Checkbox>Remember me</Checkbox>
-								<a href="/" class="ml-auto text-sm text-blue-700 hover:underline dark:text-blue-500"
+								<a
+									href="/accounts/password-reset/request"
+									class="ml-auto text-sm text-blue-700 hover:underline dark:text-blue-500"
 									>Forgot password?</a
 								>
 							</div>

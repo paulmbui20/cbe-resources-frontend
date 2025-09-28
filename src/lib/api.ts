@@ -15,6 +15,8 @@ export interface ContactFormData {
 
 class ApiService {
 	private baseUrl: string;
+	// current CSRF token kept in-memory (updated via subscription)
+	private csrfToken: string | null = null;
 	// single refresh promise to avoid concurrent refreshes
 	private refreshing: Promise<boolean> | null = null;
 	// Optional callback invoked when token refresh fails (so app can logout/redirect)
@@ -27,6 +29,31 @@ class ApiService {
 	constructor() {
 		// In Svelte, environment variables are accessed through $env/static/public
 		this.baseUrl = import.meta.env.VITE_API_BASE_URL;
+		// subscribe to csrf store if running in browser
+		try {
+			if (typeof window !== 'undefined') {
+				// Dynamic import to avoid bundling issues during SSR
+				import('$lib/stores/csrf').then((mod) => {
+					try {
+						const { csrf } = mod;
+						csrf.subscribe((v: string | null) => {
+							this.csrfToken = v;
+							// Also persist to sessionStorage for reload scenarios
+							try {
+								if (typeof window !== 'undefined') {
+									if (v) sessionStorage.setItem('csrf_token', v);
+									else sessionStorage.removeItem('csrf_token');
+								}
+							} catch (e) {}
+						});
+					} catch (e) {
+						console.debug('Failed to subscribe to csrf store', e);
+					}
+				});
+			}
+		} catch (e) {
+			// ignore dynamic import failures
+		}
 	}
 
 	private async makeRequest<T>(
@@ -65,6 +92,21 @@ class ApiService {
 			}
 		}
 
+		// Attach CSRF token to state-mutating requests if available
+		try {
+			const csrfToken =
+				this.csrfToken ??
+				(typeof window !== 'undefined' ? sessionStorage.getItem('csrf_token') : null);
+			if (csrfToken) {
+				const method = (options.method ?? 'GET').toUpperCase();
+				if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+					headers.set('X-CSRFToken', csrfToken);
+				}
+			}
+		} catch (e) {
+			// ignore storage access errors
+		}
+
 		const config: RequestInit = {
 			...options,
 			headers,
@@ -73,7 +115,21 @@ class ApiService {
 		};
 
 		try {
+			// Debug: log outgoing request metadata so we can verify credentials and headers
+			try {
+				const headerObj: Record<string, string> = {};
+				(config.headers as Headers).forEach((v, k) => (headerObj[k] = v));
+				console.debug('API Request:', {
+					url,
+					method: config.method ?? 'GET',
+					credentials: config.credentials,
+					headers: headerObj
+				});
+			} catch (e) {
+				console.debug('API Request: unable to serialize headers for debug', e);
+			}
 			let response = await fetch(url, config);
+			console.debug('API Response status:', response.status, 'for', url);
 			let data: any = {};
 			try {
 				data = await response.json();
@@ -270,10 +326,10 @@ class ApiService {
 		// If not available, call the 'logout-all' endpoint to blacklist outstanding tokens.
 		if (refresh) {
 			const body = { refresh_token: refresh };
-			return this.post('/accounts/api/logout/', body);
+			return this.post('/accounts/api/token/logout/', body);
 		} else {
 			// No refresh token in JS storage — attempt server-side logout-all which blacklists all tokens
-			return this.post('/accounts/api/auth/logout-all/', {});
+			return this.post('/accounts/api/logout-all/', {});
 		}
 	}
 

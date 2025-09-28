@@ -9,7 +9,6 @@
 	let saving = false;
 	let changingPassword = false;
 
-	// Profile model matches backend sample
 	let profile: any = {
 		id: null,
 		email: '',
@@ -27,10 +26,47 @@
 		display_name: ''
 	};
 
-	// Password fields
 	let currentPassword = '';
 	let newPassword = '';
 	let confirmPassword = '';
+
+	// Live validation state
+	let emailAvailable: boolean | null = null;
+	let usernameAvailable: boolean | null = null;
+	let initialEmail = '';
+	let initialUsername = '';
+
+	// debounce helper (same approach as signup page)
+	function debounce(fn: Function, wait = 400) {
+		let t: any;
+		return (...args: any[]) => {
+			clearTimeout(t);
+			t = setTimeout(() => fn(...args), wait);
+		};
+	}
+
+	const checkEmailDebounced = debounce(async (value: string) => {
+		if (!value) return (emailAvailable = null);
+		// if unchanged from initial, treat as available
+		if (value === initialEmail) return (emailAvailable = true);
+		try {
+			const res = await apiService.checkEmail(value);
+			emailAvailable = res.status === 200 ? !!res.data?.available : null;
+		} catch (e) {
+			emailAvailable = null;
+		}
+	}, 500);
+
+	const checkUsernameDebounced = debounce(async (value: string) => {
+		if (!value) return (usernameAvailable = null);
+		if (value === initialUsername) return (usernameAvailable = true);
+		try {
+			const res = await apiService.checkUsername(value);
+			usernameAvailable = res.status === 200 ? !!res.data?.available : null;
+		} catch (e) {
+			usernameAvailable = null;
+		}
+	}, 500);
 
 	async function loadProfile() {
 		loading = true;
@@ -38,12 +74,15 @@
 			const res = await apiService.getProfile();
 			if (res.status === 200 && res.data) {
 				profile = { ...profile, ...res.data };
-				// Update auth store user too
+				// capture initial values so we don't flag them as taken
+				initialEmail = profile.email ?? '';
+				initialUsername = profile.username ?? '';
+				// initialize availability as true for unchanged values
+				emailAvailable = true;
+				usernameAvailable = true;
 				try {
 					await auth.loadProfile();
-				} catch (e) {
-					// ignore
-				}
+				} catch (e) {}
 			} else {
 				toastStore.error(res.message || 'Failed to load profile');
 			}
@@ -61,6 +100,17 @@
 	async function saveProfile() {
 		saving = true;
 		try {
+			// Prevent saving if email/username checks indicate conflict
+			if (emailAvailable === false) {
+				toastStore.error('The provided email is already in use');
+				saving = false;
+				return;
+			}
+			if (usernameAvailable === false) {
+				toastStore.error('The provided username is already taken');
+				saving = false;
+				return;
+			}
 			const payload = {
 				first_name: profile.first_name,
 				last_name: profile.last_name,
@@ -73,12 +123,9 @@
 			const res = await apiService.updateProfile(payload);
 			if (res.status === 200 && res.data) {
 				toastStore.success('Profile updated successfully');
-				// refresh auth store
 				try {
 					await auth.loadProfile();
-				} catch (e) {
-					console.debug('Failed to refresh auth profile after update');
-				}
+				} catch (e) {}
 			} else {
 				if (res.errors) {
 					const messages = Object.values(res.errors).flat().join(', ');
@@ -93,6 +140,10 @@
 			saving = false;
 		}
 	}
+
+	// reactive watchers to perform debounced checks when fields change
+	$: if (profile?.email !== undefined) checkEmailDebounced(profile.email);
+	$: if (profile?.username !== undefined) checkUsernameDebounced(profile.username);
 
 	async function changeUserPassword() {
 		if (newPassword !== confirmPassword) {
@@ -109,17 +160,11 @@
 			});
 			if (res.status === 200 && res.data) {
 				toastStore.success(res.message || 'Password changed successfully');
-				// If backend returns new tokens, persist them via auth.refresh or other flow
 				try {
 					if (res.data.tokens) {
-						// attempt to update auth state by reading tokens (auth store expects API responses on login/register)
-						// For now, run auth.refresh to ensure tokens are valid
 						await auth.refresh();
 					}
-				} catch (e) {
-					console.debug('Failed to refresh tokens after password change');
-				}
-				// clear password fields
+				} catch (e) {}
 				currentPassword = '';
 				newPassword = '';
 				confirmPassword = '';
@@ -140,10 +185,9 @@
 </script>
 
 <div class="space-y-6">
-	<h2 class="text-2xl font-bold">Account Settings</h2>
+	<h2 class="text-2xl font-bold dark:text-white">Account Settings</h2>
 
 	<form class="space-y-6" on:submit|preventDefault={saveProfile}>
-		<!-- Personal Information -->
 		<div class="space-y-4">
 			<h3 class="text-xl font-semibold">Personal Information</h3>
 
@@ -169,7 +213,6 @@
 			</div>
 		</div>
 
-		<!-- Notification Preferences -->
 		<div class="space-y-4">
 			<h3 class="text-xl font-semibold">Notification Preferences</h3>
 
@@ -202,7 +245,6 @@
 		</div>
 	</form>
 
-	<!-- Password Change -->
 	<div class="space-y-6">
 		<h3 class="text-xl font-semibold">Change Password</h3>
 		<div>

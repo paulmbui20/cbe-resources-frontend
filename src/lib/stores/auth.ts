@@ -117,8 +117,18 @@ function createAuthStore() {
 					set(state);
 					// If backend didn't include user object, fetch profile
 					if (!user) {
+						// If tokens not provided, backend may be using HttpOnly cookies for auth.
+						// Try to load the profile (this request will include cookies via fetch credentials: 'include').
 						try {
-							await auth.loadProfile();
+							const profileRes = await apiService.getProfile();
+							if (profileRes.status === 200 && profileRes.data) {
+								// Mark the user as authenticated even if we didn't receive JSON tokens
+								update((s) => ({ ...s, user: profileRes.data, isAuthenticated: true }));
+							} else {
+								console.debug(
+									'Profile not available after login; backend may not have set session cookie'
+								);
+							}
 						} catch (e) {
 							console.debug('Failed to load profile after login', e);
 						}

@@ -3,6 +3,7 @@
 	import { Section, Register } from 'flowbite-svelte-blocks';
 	import { Button, Checkbox, Label, Input } from 'flowbite-svelte';
 	import favicon from '$lib/assets/favicon.svg';
+	import { apiService } from '$lib/api';
 
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
@@ -19,6 +20,21 @@
 
 	let isSubmitting = false;
 
+	// Email and username availability checking
+	let emailAvailable: boolean | null = null;
+	let usernameAvailable: boolean | null = null;
+	let emailClientError = '';
+	let usernameClientError = '';
+
+	// Lightweight dedupe / guards to avoid duplicate requests and handle out-of-order responses
+	let lastRequestedEmail = '';
+	let lastCheckedEmail = '';
+	let emailCheckCounter = 0;
+
+	let lastRequestedUsername = '';
+	let lastCheckedUsername = '';
+	let usernameCheckCounter = 0;
+
 	// Redirect away if already logged in
 	import { onMount } from 'svelte';
 	onMount(() => {
@@ -27,7 +43,7 @@
 		unsub();
 		if (current) {
 			toastStore.info('You are already logged in');
-			goto('/account');
+			goto('/accounts');
 		}
 	});
 
@@ -69,7 +85,7 @@
 
 			if (res.status === 201 || res.status === 200) {
 				toastStore.success('Registration successful! Welcome aboard.');
-				goto('/account');
+				goto('/accounts');
 			} else {
 				if (res.errors) {
 					// Show validation errors from backend
@@ -98,33 +114,98 @@
 		};
 	}
 
-	import { apiService } from '$lib/api';
-	let emailAvailable: boolean | null = null;
-	let usernameAvailable: boolean | null = null;
-
 	const checkEmailDebounced = debounce(async (value: string) => {
-		if (!value) return (emailAvailable = null);
+		if (!value) {
+			emailAvailable = null;
+			lastRequestedEmail = '';
+			lastCheckedEmail = '';
+			return;
+		}
+		// if we've already verified this value, skip
+		if (value === lastCheckedEmail) return;
+		// if already requested this exact value and waiting, skip
+		if (value === lastRequestedEmail) return;
+
+		lastRequestedEmail = value;
+		const id = ++emailCheckCounter;
 		try {
 			const res = await apiService.checkEmail(value);
-			emailAvailable = res.status === 200 ? !!res.data?.available : null;
+			// only apply result if this is the latest request
+			if (id === emailCheckCounter) {
+				emailAvailable = res.status === 200 ? !!res.data?.available : null;
+				if (emailAvailable !== null) lastCheckedEmail = value;
+			}
 		} catch (e) {
-			emailAvailable = null;
+			if (id === emailCheckCounter) emailAvailable = null;
+		} finally {
+			if (id === emailCheckCounter) lastRequestedEmail = '';
 		}
 	}, 500);
 
 	const checkUsernameDebounced = debounce(async (value: string) => {
-		if (!value) return (usernameAvailable = null);
+		if (!value) {
+			usernameAvailable = null;
+			lastRequestedUsername = '';
+			lastCheckedUsername = '';
+			return;
+		}
+		if (value === lastCheckedUsername) return;
+		if (value === lastRequestedUsername) return;
+
+		lastRequestedUsername = value;
+		const id = ++usernameCheckCounter;
 		try {
 			const res = await apiService.checkUsername(value);
-			usernameAvailable = res.status === 200 ? !!res.data?.available : null;
+			if (id === usernameCheckCounter) {
+				usernameAvailable = res.status === 200 ? !!res.data?.available : null;
+				if (usernameAvailable !== null) lastCheckedUsername = value;
+			}
 		} catch (e) {
-			usernameAvailable = null;
+			if (id === usernameCheckCounter) usernameAvailable = null;
+		} finally {
+			if (id === usernameCheckCounter) lastRequestedUsername = '';
 		}
 	}, 500);
 
-	// watch inputs
-	$: if (email) checkEmailDebounced(email);
-	$: if (username) checkUsernameDebounced(username);
+	function isValidEmail(value: string) {
+		// simple RFC2822-ish check
+		return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+	}
+
+	// Trigger checks only on blur (when input focus changes) or when user leaves the form
+	function handleEmailBlur() {
+		emailClientError = '';
+		if (!email) {
+			emailAvailable = null;
+			lastRequestedEmail = '';
+			lastCheckedEmail = '';
+			return;
+		}
+		if (!isValidEmail(email)) {
+			emailAvailable = null;
+			emailClientError = 'Please enter a valid email address';
+			return;
+		}
+		// Only check availability if we have a valid email
+		checkEmailDebounced(email);
+	}
+
+	function handleUsernameBlur() {
+		usernameClientError = '';
+		if (!username) {
+			usernameAvailable = null;
+			lastRequestedUsername = '';
+			lastCheckedUsername = '';
+			return;
+		}
+		if (username.length < 3) {
+			usernameAvailable = null;
+			usernameClientError = 'Username must be at least 3 characters';
+			return;
+		}
+		// Only check availability if username is long enough
+		checkUsernameDebounced(username);
+	}
 </script>
 
 <!-- Above the fold registration layout matching contact/login -->
@@ -162,30 +243,37 @@
 							<div class="grid gap-4 md:grid-cols-2">
 								<Label class="space-y-2">
 									<span>Username</span>
-									<Input
-										bind:value={username}
-										type="text"
-										name="username"
-										placeholder="username"
-										required
-									/>
-									{#if usernameAvailable === true}
+									<div on:focusout={handleUsernameBlur}>
+										<Input
+											bind:value={username}
+											type="text"
+											name="username"
+											placeholder="username"
+											required
+										/>
+									</div>
+									{#if usernameClientError}
+										<p class="text-sm text-red-600">{usernameClientError}</p>
+									{:else if usernameAvailable === true}
 										<p class="text-sm text-green-600">Username is available</p>
 									{:else if usernameAvailable === false}
 										<p class="text-sm text-red-600">Username is taken</p>
 									{/if}
 								</Label>
-
 								<Label class="space-y-2">
 									<span>Your email</span>
-									<Input
-										bind:value={email}
-										type="email"
-										name="email"
-										placeholder="name@company.com"
-										required
-									/>
-									{#if emailAvailable === true}
+									<div on:focusout={handleEmailBlur}>
+										<Input
+											bind:value={email}
+											type="email"
+											name="email"
+											placeholder="name@company.com"
+											required
+										/>
+									</div>
+									{#if emailClientError}
+										<p class="text-sm text-red-600">{emailClientError}</p>
+									{:else if emailAvailable === true}
 										<p class="text-sm text-green-600">Email is available</p>
 									{:else if emailAvailable === false}
 										<p class="text-sm text-red-600">Email is already registered</p>

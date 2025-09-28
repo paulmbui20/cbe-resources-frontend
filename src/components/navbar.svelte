@@ -8,11 +8,18 @@
 		Button,
 		Dropdown,
 		DropdownItem,
-		Badge
+		Badge,
+		Avatar,
+		DropdownHeader,
+		DropdownGroup
 	} from 'flowbite-svelte';
+
 	import { DarkMode } from 'flowbite-svelte';
 	import { ChevronDownOutline, CartPlusSolid, TrashBinSolid } from 'flowbite-svelte-icons';
 	import favicon from '$lib/assets/favicon.svg';
+	import { goto } from '$app/navigation';
+
+	import userProfileIcon from '$lib/assets/user-profile-icon.svg';
 	import { cart, type CartItem } from '$lib/stores/cart';
 	import { auth } from '$lib/stores/auth';
 	import { toastStore } from '$lib/stores/toast';
@@ -111,7 +118,36 @@
 			</div>
 			<DarkMode class="border text-primary-500 dark:border-gray-800 dark:text-primary-600" />
 			{#if user}
-				<Button href="/account">Account</Button>
+				<Avatar
+					id="user-drop"
+					src={userProfileIcon}
+					class="cursor-pointer"
+					dot={{ color: 'primary' }}
+				/>
+				<Dropdown triggeredBy="#user-drop">
+					<DropdownHeader>
+						<span class="block text-sm">{user.username}</span>
+						<span class="block truncate text-sm font-medium">{user.email}</span>
+					</DropdownHeader>
+					<DropdownGroup>
+						<DropdownItem href="/accounts">Account</DropdownItem>
+						<DropdownItem href="/accounts/purchases">Purchases</DropdownItem>
+						<DropdownItem href="/accounts/downloads">Downloads</DropdownItem>
+						<DropdownItem href="/accounts/download-history">Download History</DropdownItem>
+						<DropdownItem href="accounts/orders">Orders</DropdownItem>
+					</DropdownGroup>
+					<DropdownGroup>
+						<DropdownItem>
+							<button
+								on:click={async () => {
+									await auth.logout();
+									toastStore.success('Signed out');
+									goto('/');
+								}}>Sign out</button
+							>
+						</DropdownItem>
+					</DropdownGroup>
+				</Dropdown>
 			{:else}
 				<Button href="/login">Log in</Button>
 			{/if}

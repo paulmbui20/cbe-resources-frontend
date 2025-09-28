@@ -32,7 +32,7 @@
 </script>
 
 <div class="space-y-6">
-	<h2 class="text-2xl font-bold">Download History</h2>
+	<h2 class="text-2xl font-bold dark:text-white">Download History</h2>
 
 	<div class="overflow-x-auto">
 		<Table striped>

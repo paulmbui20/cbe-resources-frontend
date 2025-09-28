@@ -35,7 +35,7 @@
 
 <div class="space-y-6">
 	<div class="flex items-center justify-between">
-		<h2 class="text-2xl font-bold">My Purchases</h2>
+		<h2 class="text-2xl font-bold dark:text-white">My Purchases</h2>
 		<Button href="/products" color="primary">Browse More Resources</Button>
 	</div>
 
@@ -71,7 +71,7 @@
 								{#if p.download_url}
 									<a href={p.download_url} class="text-primary-600 hover:underline">Download</a>
 								{:else}
-									<Button size="xs" href="/account/downloads">Downloads</Button>
+									<Button size="xs" href="/accounts/downloads">Downloads</Button>
 								{/if}
 							</TableBodyCell>
 						</TableBodyRow>

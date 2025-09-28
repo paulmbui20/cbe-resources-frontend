@@ -22,19 +22,18 @@
 			if (res.status === 200) {
 				toastStore.success(res.message || 'Email verified');
 				status = 'success';
-				// backend often provides redirect_url
 				const redirect = res.data?.redirect_url ?? '/login';
 				goto(redirect);
 			} else {
 				toastStore.error(res.message || 'Verification failed');
 				status = 'failed';
-				const redirect = res.data?.redirect_url ?? '/resend-verification';
+				const redirect = res.data?.redirect_url ?? '/accounts/resend-verification';
 				goto(redirect);
 			}
 		} catch (e) {
 			toastStore.error('Network error during verification');
 			status = 'failed';
-			goto('/resend-verification');
+			goto('/accounts/resend-verification');
 		}
 	});
 </script>
